@@ -1,6 +1,6 @@
 export default {
   async fetch(request) {
-    const url = new URL(request.url);
+j    const url = new URL(request.url);
 
     if (request.method === "GET") {
       return new Response(`<!doctype html>
@@ -216,12 +216,84 @@ async function findCompetitors(city, type, userUrl) {
         if (out.length >= 6) return out;
       }
     } catch (_) {
+async function findCompetitors(city, type, userUrl) {
+  const queries = [
+    type + " " + city,
+    type + " near " + city,
+    "best " + type + " in " + city
+  ];
+
+  const out = [];
+  const seen = new Set();
+  const userHost = hostname(userUrl)
+    .replace(/^www\./i, "")
+    .toLowerCase();
+
+  for (const q of queries) {
+    try {
+      const searchUrl =
+        "https://www.google.com/search?q=" +
+        encodeURIComponent(q) +
+        "&num=10";
+
+      const sr = await fetch("https://r.jina.ai/" + searchUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 LocalSEOOpportunityFinder",
+          "Accept": "text/plain"
+        }
+      });
+
+      if (!sr.ok) continue;
+
+      const txt = await sr.text();
+
+      for (const u of extractUrls(txt)) {
+        let parsed;
+
+        try {
+          parsed = new URL(u);
+        } catch (_) {
+          continue;
+        }
+
+        if (
+          parsed.protocol !== "http:" &&
+          parsed.protocol !== "https:"
+        ) {
+          continue;
+        }
+
+        const host = hostname(parsed.origin)
+          .replace(/^www\./i, "")
+          .toLowerCase();
+
+        const clean = parsed.origin + parsed.pathname;
+
+        if (
+          !host ||
+          host === userHost ||
+          host.endsWith("." + userHost) ||
+          isExcludedHost(host) ||
+          seen.has(host)
+        ) {
+          continue;
+        }
+
+        seen.add(host);
+        out.push({
+          name: host,
+          url: clean
+        });
+
+        if (out.length >= 6) return out;
+      }
+    } catch (_) {
       // Continue to the next search query if a request fails.
     }
   }
 
-    return out;
-}
+  return out;
+          }
 
 function isExcludedHost(host){
  const excluded=["google.com","googleusercontent.com","gstatic.com","youtube.com","facebook.com","instagram.com","linkedin.com","tiktok.com","x.com","twitter.com","reddit.com","yelp.com","yellowpages.com","marham.pk","oladoc.com","healthwire.pk","instacare.pk","whatclinic.com","tripadvisor.com"];
