@@ -150,23 +150,79 @@ function classifySite(u,html,type){
  const words=businessWords[type]||[], matches=words.filter(w=>lower.includes(w)).length;
  return matches>=1?"Direct website competitor":"Unknown";
 }
-async function findCompetitors(city,type,userUrl){
- const queries=[type+" "+city,type+" near "+city,"best "+type+" "+city],out=[],seen=new Set(),userHost=hostname(userUrl);
- for(const q of queries){
-  try{
-   const searchUrl="https://www.google.com/search?q="+encodeURIComponent(q)+"&num=10";
-   const sr=await fetch("https://r.jina.ai/"+searchUrl,{headers:{"User-Agent":"Mozilla/5.0 LocalSEOOpportunityFinder"}});
-   if(!sr.ok)continue;
-   const txt=await sr.text();
-   for(const u of extractUrls(txt)){
-    let clean=u;try{const parsed=new URL(u);if(parsed.protocol!=="http:"&&parsed.protocol!=="https:")continue;clean=parsed.origin+parsed.pathname}catch(_){continue}
-    const host=hostname(clean);if(!host||host===userHost||host.endsWith("."+userHost)||isExcludedHost(host)||seen.has(host))continue;
-    seen.add(host);out.push({name:host,url:clean});if(out.length>=6)return out;
-   }
-  }catch(_){}
- }
- return out;
+async function findCompetitors(city, type, userUrl) {
+  const queries = [
+    type + " " + city,
+    type + " near " + city,
+    "best " + type + " " + city
+  ];
+
+  const out = [];
+  const seen = new Set();
+  const userHost = hostname(userUrl);
+
+  for (const q of queries) {
+    try {
+      const searchUrl =
+        "https://www.google.com/search?q=" +
+        encodeURIComponent(q) +
+        "&num=10";
+
+      const sr = await fetch("https://r.jina.ai/" + searchUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 LocalSEOOpportunityFinder"
+        }
+      });
+
+      if (!sr.ok) continue;
+
+      const txt = await sr.text();
+
+      for (const u of extractUrls(txt)) {
+        let parsed;
+
+        try {
+          parsed = new URL(u);
+        } catch (_) {
+          continue;
+        }
+
+        if (
+          parsed.protocol !== "http:" &&
+          parsed.protocol !== "https:"
+        ) {
+          continue;
+        }
+
+        const host = hostname(parsed.origin);
+        const clean = parsed.origin + parsed.pathname;
+
+        if (
+          !host ||
+          host === userHost ||
+          host.endsWith("." + userHost) ||
+          isExcludedHost(host) ||
+          seen.has(host)
+        ) {
+          continue;
+        }
+
+        seen.add(host);
+        out.push({
+          name: host,
+          url: clean
+        });
+
+        if (out.length >= 6) return out;
+      }
+    } catch (_) {
+      // Continue to the next search query if a request fails.
+    }
+  }
+
+    return out;
 }
+
 function isExcludedHost(host){
  const excluded=["google.com","googleusercontent.com","gstatic.com","youtube.com","facebook.com","instagram.com","linkedin.com","tiktok.com","x.com","twitter.com","reddit.com","yelp.com","yellowpages.com","marham.pk","oladoc.com","healthwire.pk","instacare.pk","whatclinic.com","tripadvisor.com"];
  return excluded.some(x=>host===x||host.endsWith("."+x))
